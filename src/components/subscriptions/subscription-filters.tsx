@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, LayoutGrid, List, Calendar, X, SlidersHorizontal } from "lucide-react";
+import { Search, LayoutGrid, List, Calendar, X } from "lucide-react";
 import { PLATFORMS, CATEGORIES, STATUS_MAP } from "@/lib/types";
 
 interface SubscriptionFiltersProps {

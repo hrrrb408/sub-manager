@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, Calendar, CreditCard } from "lucide-react";
+import { RefreshCw, CreditCard } from "lucide-react";
 import { BILLING_CYCLE_MAP, formatAmount, type Subscription } from "@/lib/types";
 import { addMonths, addYears, addWeeks, format } from "date-fns";
 
