@@ -1,4 +1,4 @@
-const CACHE_NAME = "submanager-v2";
+const CACHE_NAME = "submanager-v3";
 
 const APP_SHELL = ["/", "/manifest.json", "/icon.svg"];
 
