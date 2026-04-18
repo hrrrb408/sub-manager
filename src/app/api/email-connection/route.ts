@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getUserId } from "@/lib/get-user";
+import { encryptServer } from "@/lib/server-crypto";
+import { getImapConfig } from "@/lib/email-providers";
 
 export async function GET() {
   try {
@@ -41,17 +43,10 @@ export async function POST(req: Request) {
 
     let host = imapHost;
     let port = imapPort || 993;
-
-    const PROVIDERS: Record<string, { host: string; port: number }> = {
-      qq: { host: "imap.qq.com", port: 993 },
-      "163": { host: "imap.163.com", port: 993 },
-      gmail: { host: "imap.gmail.com", port: 993 },
-      outlook: { host: "outlook.office365.com", port: 993 },
-    };
-
-    if (provider && PROVIDERS[provider]) {
-      host = PROVIDERS[provider].host;
-      port = PROVIDERS[provider].port;
+    if (provider && getImapConfig(provider)) {
+      const config = getImapConfig(provider)!;
+      host = config.host;
+      port = config.port;
     }
 
     if (!host) {
@@ -65,15 +60,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "该邮箱已添加" }, { status: 409 });
     }
 
-    // Encrypt password
-    const crypto = await import("crypto");
-    const secret = process.env.AUTH_SECRET || "";
-    const key = crypto.scryptSync(secret, "submanager-email-encryption", 32);
-    const iv = crypto.randomBytes(16);
-    const cipher = crypto.createCipheriv("aes-256-gcm", key, iv);
-    const encrypted = Buffer.concat([cipher.update(password, "utf8"), cipher.final()]);
-    const tag = cipher.getAuthTag();
-    const encryptedPassword = Buffer.concat([iv, tag, encrypted]).toString("base64");
+    const encryptedPassword = encryptServer(password);
 
     const connection = await prisma.emailConnection.create({
       data: {
