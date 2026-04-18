@@ -44,9 +44,14 @@ export function EmailScanSettings({ onScanComplete }: EmailScanSettingsProps) {
   const fetchConnections = async () => {
     try {
       const res = await fetch("/api/email-connection");
-      if (res.ok) setConnections(await res.json());
-    } catch {
-      /* ignore */
+      if (res.ok) {
+        setConnections(await res.json());
+      } else {
+        const err = await res.text();
+        console.error("[email-connection] GET failed:", res.status, err);
+      }
+    } catch (e) {
+      console.error("[email-connection] fetch error:", e);
     } finally {
       setLoading(false);
     }

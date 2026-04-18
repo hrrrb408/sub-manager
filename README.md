@@ -1,8 +1,16 @@
 # SubManager - 订阅管理平台
 
-一个功能完整的 SaaS 订阅管理平台，用于追踪和管理你在各类在线服务上的订阅支出，包括 Stripe、LangSmith、Supabase、Vercel、OpenAI、Anthropic、GitHub Copilot 等平台。
+一个功能完整的 SaaS 订阅管理平台，支持多用户注册登录，可追踪和管理各类在线服务订阅支出，还能通过 IMAP 自动扫描邮箱账单并智能识别订阅。
 
 ## 功能特性
+
+### 多用户认证
+
+- **邮箱密码注册/登录** — 支持 email + password 注册和登录
+- **OAuth 登录** — 支持 GitHub、Google 第三方登录（需配置环境变量）
+- **JWT 会话** — 基于 JWT 的无状态会话管理
+- **数据隔离** — 每个用户只能看到自己的订阅和配置数据
+- **路由保护** — 未登录用户自动跳转到登录页
 
 ### 订阅管理
 
@@ -16,6 +24,15 @@
 - **重复检测** — 添加订阅时实时检测同名同平台的活跃订阅，即时显示警告
 - **软删除** — 删除订阅后支持 5 秒内撤销，防止误操作
 - **批量导入** — 支持 CSV / JSON 文件拖拽导入，自动中英文字段映射和数据预览
+
+### 邮箱账单扫描（AI 智能识别）
+
+- **IMAP 邮箱连接** — 支持 QQ 邮箱、163、Gmail、Outlook 等，一键配置
+- **自动扫描** — 连接邮箱后自动扫描最近 30 天的支付账单邮件
+- **LLM 智能解析** — 调用大语言模型（OpenAI / DeepSeek / Ollama 等）自动提取订阅信息
+- **审核导入** — 扫描结果需人工审核确认后才导入，支持编辑修正
+- **定期自动扫描** — 每天凌晨 3 点自动扫描所有已启用的邮箱连接
+- **密码安全** — 邮箱授权码使用 AES-256-GCM 服务端加密存储
 
 ### 日历视图
 
@@ -69,15 +86,18 @@
 
 | 类别 | 技术 |
 |------|------|
-| 框架 | Next.js 16 (App Router) |
+| 框架 | Next.js 16 (App Router, Turbopack) |
 | 语言 | TypeScript 5 |
 | 数据库 | MySQL (Prisma 6 ORM) |
+| 认证 | NextAuth.js v5 (Auth.js) |
 | UI 组件 | shadcn/ui (base-nova 风格, Radix v2) |
 | 样式 | Tailwind CSS v4 (OKLCH 色彩空间) |
 | 图表 | Recharts 3 |
 | 邮件 | Nodemailer 8 |
+| 邮件扫描 | imapflow + mailparser |
 | 定时任务 | node-cron 4 |
-| 加密 | crypto-js (AES) |
+| 客户端加密 | crypto-js (AES) |
+| 服务端加密 | Node.js crypto (AES-256-GCM) |
 | 日期 | date-fns 4 |
 | 命令面板 | cmdk |
 | 通知 | Sonner |
@@ -104,37 +124,60 @@ cd 订阅管理
 npm install
 ```
 
-### 3. 配置数据库
+### 3. 配置环境变量
 
 在项目根目录创建 `.env` 文件：
 
 ```env
+# 数据库
 DATABASE_URL="mysql://用户名:密码@localhost:3306/sub_manager"
+
+# NextAuth 认证（必填）
+AUTH_SECRET="生成一个随机密钥"
+AUTH_URL="http://localhost:3000"
+
+# OAuth 登录（可选，不配置则仅支持邮箱密码登录）
+# GITHUB_ID=""
+# GITHUB_SECRET=""
+# GOOGLE_CLIENT_ID=""
+# GOOGLE_CLIENT_SECRET=""
+
+# 邮箱扫描 LLM 配置（可选，不配置则无法使用智能扫描功能）
+# LLM_API_URL="https://api.openai.com/v1/chat/completions"
+# LLM_API_KEY=""
+# LLM_MODEL="gpt-4o-mini"
 ```
 
-然后推送数据库结构：
+### 4. 初始化数据库
 
 ```bash
 npx prisma db push
 ```
 
-### 4. 启动开发服务器
+### 5. 启动开发服务器
 
 ```bash
 npm run dev
 ```
 
-打开浏览器访问 http://localhost:3000 即可使用。
+打开浏览器访问 http://localhost:3000，首次使用需注册账号。
 
-### 5. 生成演示数据（可选）
+### 6. 生成演示数据（可选）
 
-启动后，通过 API 一键生成演示数据：
+登录后，通过 API 一键生成演示数据：
 
 ```bash
-curl -X POST http://localhost:3000/api/seed
+curl -X POST http://localhost:3000/api/seed -b <your-auth-cookie>
 ```
 
 ## 使用指南
+
+### 注册与登录
+
+1. 首次访问会自动跳转到登录页
+2. 点击「注册账号」创建新用户（邮箱 + 密码，密码至少 6 位）
+3. 注册成功后自动跳转到登录页，输入邮箱密码登录
+4. 如果配置了 GitHub / Google OAuth，也可以直接点击第三方登录
 
 ### 添加订阅
 
@@ -150,6 +193,15 @@ curl -X POST http://localhost:3000/api/seed
 
 - **一键续费**：在订阅卡片/表格中点击「续费」按钮，系统自动按计费周期延长到期日期
 - **手动编辑**：点击「编辑」按钮，手动修改到期日期和其他信息
+
+### 邮箱账单扫描
+
+1. 切换到「设置」标签页，找到「邮箱扫描」区域
+2. 点击「添加邮箱」，选择邮箱提供商（QQ/163/Gmail/Outlook）
+3. 输入邮箱地址和授权码（非登录密码，需在邮箱设置中开启 IMAP 并获取）
+4. 点击「开始扫描」，系统会扫描最近 30 天的邮件
+5. 扫描完成后，在「发现订阅」区域查看识别结果
+6. 确认信息无误后点击「导入」，也可先编辑修正再导入
 
 ### 配置到期通知
 
@@ -200,47 +252,76 @@ curl -X POST http://localhost:3000/api/seed
 │   └── icon.svg               # 应用图标
 ├── src/
 │   ├── app/
-│   │   ├── layout.tsx         # 根布局（主题、Toast）
+│   │   ├── layout.tsx         # 根布局（主题、Toast、AuthProvider）
 │   │   ├── page.tsx           # 主页面（三标签页）
+│   │   ├── login/page.tsx     # 登录页
+│   │   ├── register/page.tsx  # 注册页
 │   │   ├── instrumentation.ts # 服务启动钩子（初始化定时任务）
+│   │   ├── middleware.ts      # 路由保护（认证检查）
 │   │   └── api/
-│   │       ├── subscriptions/   # 订阅 CRUD + 续费 + 导入
-│   │       ├── stats/           # 统计数据
-│   │       ├── budget/          # 预算配置
-│   │       ├── exchange-rate/   # 汇率查询（带缓存）
-│   │       ├── report/          # 年度报告
-│   │       ├── backup/          # 数据备份/恢复
-│   │       ├── notify-config/   # 通知配置
-│   │       ├── notify-check/    # 触发检查 + 发送通知
-│   │       ├── notify-test/     # 发送测试通知
-│   │       ├── notify-logs/     # 通知日志
-│   │       └── seed/            # 演示数据
+│   │       ├── auth/[...nextauth]/  # NextAuth API
+│   │       ├── register/            # 用户注册
+│   │       ├── subscriptions/       # 订阅 CRUD + 续费 + 导入
+│   │       ├── stats/               # 统计数据
+│   │       ├── budget/              # 预算配置
+│   │       ├── exchange-rate/       # 汇率查询
+│   │       ├── report/              # 年度报告
+│   │       ├── backup/              # 数据备份/恢复
+│   │       ├── notify-config/       # 通知配置
+│   │       ├── notify-check/        # 触发检查 + 发送通知
+│   │       ├── notify-test/         # 发送测试通知
+│   │       ├── notify-logs/         # 通知日志
+│   │       ├── email-connection/    # 邮箱连接管理
+│   │       ├── email-scan/          # 邮件扫描触发
+│   │       ├── email-scan/discovered/  # 发现的订阅
+│   │       ├── email-scan/import/      # 导入发现的订阅
+│   │       ├── email-scan/dismiss/     # 忽略发现的订阅
+│   │       └── seed/                 # 演示数据
 │   ├── components/
-│   │   ├── subscriptions/     # 业务组件
+│   │   ├── subscriptions/     # 业务组件（表单、卡片、表格、邮箱扫描等）
 │   │   ├── dashboard/         # 仪表盘组件
 │   │   ├── charts/            # 图表组件
 │   │   ├── ui/                # shadcn/ui 基础组件
 │   │   ├── error-boundary.tsx # 错误边界
 │   │   └── theme-provider.tsx # 主题上下文
 │   └── lib/
+│       ├── auth.ts            # NextAuth v5 配置
+│       ├── auth-context.tsx   # 客户端 AuthProvider + useAuth
+│       ├── get-user.ts        # 服务端获取当前用户 ID
 │       ├── prisma.ts          # Prisma 单例
 │       ├── types.ts           # 类型定义、常量、工具函数
-│       ├── crypto.ts          # AES 加密/解密
+│       ├── crypto.ts          # 客户端 AES 加密/解密
+│       ├── server-crypto.ts   # 服务端 AES-256-GCM 加密
+│       ├── email-providers.ts # IMAP 邮箱提供商预设
+│       ├── llm-parser.ts      # LLM 邮件解析
+│       ├── email-scanner.ts   # IMAP 邮件扫描引擎
 │       ├── notify.ts          # 通知发送服务
 │       ├── scheduler.ts       # 定时任务调度器
 │       ├── register-sw.ts     # Service Worker 注册
 │       └── utils.ts           # 通用工具
-├── .env                       # 环境变量（DATABASE_URL）
+├── .env                       # 环境变量
 ├── package.json
 └── next.config.ts
 ```
 
 ## 数据库模型
 
+### User（用户）
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| id | String (CUID) | 主键 |
+| email | String | 邮箱（唯一） |
+| name | String? | 显示名称 |
+| password | String? | 密码哈希（bcrypt） |
+| image | String? | 头像 |
+| createdAt | DateTime | 创建时间 |
+
 ### Subscription（订阅）
 
 | 字段 | 类型 | 说明 |
 |------|------|------|
+| userId | String | 所属用户 |
 | name | String | 服务名称 |
 | platform | String | 平台名称 |
 | plan | String | 订阅计划 |
@@ -248,45 +329,84 @@ curl -X POST http://localhost:3000/api/seed
 | currency | String | 币种（USD/EUR/GBP/CNY/JPY） |
 | billingCycle | String | 计费周期（monthly/yearly/weekly） |
 | status | String | 状态（active/trialing/cancelled/expired） |
-| category | String | 分类（development/ai/design/marketing/productivity/infrastructure/other） |
+| category | String | 分类 |
 | startDate | DateTime | 开始日期 |
 | endDate | DateTime? | 到期日期（可选，系统可自动推算） |
-| account | String? | 登录账号 |
 | encryptedPassword | String? | AES 加密后的密码 |
 | remindDays | Int | 提前提醒天数（默认 7） |
 
-### NotificationConfig（通知配置）
+### EmailConnection（邮箱连接）
 
-单例模型（id 固定为 "default"），存储邮件 SMTP 配置、Webhook 配置和定时检查时间。
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| userId | String | 所属用户 |
+| provider | String | 邮箱提供商（qq/163/gmail/outlook/custom） |
+| imapHost | String | IMAP 服务器地址 |
+| imapPort | Int | IMAP 端口 |
+| email | String | 邮箱地址 |
+| encryptedPassword | String | AES-256-GCM 加密的授权码 |
+| scanEnabled | Boolean | 是否启用定期扫描 |
+| lastScanAt | DateTime? | 上次扫描时间 |
 
-### NotificationLog（通知日志）
+### DiscoveredSubscription（发现的订阅）
 
-记录每次通知发送的类型（email/webhook）、状态（success/failed）、标题和错误信息。
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| userId | String | 所属用户 |
+| serviceName | String | 识别出的服务名称 |
+| amount | Float? | 识别出的金额 |
+| currency | String? | 币种 |
+| billingCycle | String? | 计费周期 |
+| confidence | Float | 识别置信度（0-1） |
+| status | String | 状态（pending/imported/dismissed） |
 
-### BudgetConfig（预算配置）
+### 其他模型
 
-单例模型，存储月度预算、年度预算和预算币种。
+- **NotificationConfig** — 每用户通知配置（SMTP、Webhook、定时检查时间）
+- **NotificationLog** — 通知发送日志
+- **BudgetConfig** — 每用户预算配置
+- **Account / Session / VerificationToken** — NextAuth.js 所需的标准模型
 
 ## API 接口
+
+### 认证
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| POST | `/api/register` | 注册新用户 |
+| POST | `/api/auth/[...nextauth]` | NextAuth 登录/登出/会话 |
 
 ### 订阅管理
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/subscriptions` | 获取订阅列表（支持 status/category/platform/search 参数） |
+| GET | `/api/subscriptions` | 获取订阅列表 |
 | POST | `/api/subscriptions` | 创建订阅（含重复检测） |
 | PUT | `/api/subscriptions/[id]` | 更新订阅 |
 | DELETE | `/api/subscriptions/[id]` | 删除订阅 |
-| POST | `/api/subscriptions/[id]/renew` | 续费（自动延长一个计费周期） |
-| POST | `/api/subscriptions/import` | 批量导入订阅（CSV/JSON） |
+| POST | `/api/subscriptions/[id]/renew` | 续费 |
+| POST | `/api/subscriptions/import` | 批量导入 |
+
+### 邮箱扫描
+
+| 方法 | 路径 | 说明 |
+|------|------|------|
+| GET | `/api/email-connection` | 获取邮箱连接列表 |
+| POST | `/api/email-connection` | 添加邮箱连接 |
+| DELETE | `/api/email-connection/[id]` | 删除邮箱连接 |
+| PATCH | `/api/email-connection/[id]` | 更新邮箱连接（启用/禁用扫描） |
+| POST | `/api/email-scan` | 触发邮件扫描 |
+| GET | `/api/email-scan/discovered` | 获取发现的订阅 |
+| POST | `/api/email-scan/import` | 导入发现的订阅 |
+| POST | `/api/email-scan/dismiss` | 忽略发现的订阅 |
 
 ### 统计分析
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/stats` | 获取统计数据（月/年支出、分类/平台分布、趋势、即将续费、币种分布） |
-| GET | `/api/exchange-rate` | 获取实时汇率（1 小时缓存） |
-| GET | `/api/report` | 获取年度报告数据 |
+| GET | `/api/stats` | 获取统计数据 |
+| GET | `/api/exchange-rate` | 获取实时汇率 |
+| GET | `/api/report` | 获取年度报告 |
 | GET | `/api/budget` | 获取预算配置 |
 | PUT | `/api/budget` | 更新预算配置 |
 
@@ -296,16 +416,16 @@ curl -X POST http://localhost:3000/api/seed
 |------|------|------|
 | GET | `/api/notify-config` | 获取通知配置 |
 | PUT | `/api/notify-config` | 更新通知配置 |
-| POST | `/api/notify-check` | 手动触发检查并发送通知 |
-| POST | `/api/notify-test` | 发送测试邮件/Webhook |
+| POST | `/api/notify-check` | 手动触发通知 |
+| POST | `/api/notify-test` | 发送测试通知 |
 | GET | `/api/notify-logs` | 获取通知日志 |
 
 ### 数据管理
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/api/backup` | 导出全量数据备份 |
-| POST | `/api/backup` | 从备份文件恢复数据 |
+| GET | `/api/backup` | 导出全量备份 |
+| POST | `/api/backup` | 从备份恢复 |
 | POST | `/api/seed` | 生成演示数据 |
 
 ## 常用命令
@@ -325,8 +445,9 @@ npx tsc --noEmit         # TypeScript 类型检查（推荐）
 
 ## 注意事项
 
-1. **Turbopack 中文路径问题**：Next.js 16 默认使用 Turbopack，项目路径包含中文字符可能导致部分路由编译失败。API 路由应使用扁平路径（如 `/api/notify-config` 而非 `/api/notifications/config`）。
-2. **密码安全**：密码在客户端通过 AES 加密后才发送到服务器，服务端永远不接触明文密码。主密钥仅存在于浏览器 localStorage 中。
-3. **定时任务**：定时检查随 Next.js 服务启动自动运行，无需额外配置 cron job。
-4. **时区处理**：所有日期比较均规范化为当天零点后进行，避免 UTC 与本地时间差异导致的天数计算不一致。
-5. **PWA**：生产环境部署后可通过浏览器「安装到桌面」功能作为独立应用使用。
+1. **Turbopack 中文路径问题**：项目路径包含中文字符时，Turbopack 生成内部标识符可能出现 UTF-8 字节切割错误。已在 `next.config.ts` 中设置 `turbopack.root` 为项目目录来规避此问题。
+2. **密码安全**：订阅密码在客户端通过 AES 加密后才发送到服务器，服务端永远不接触明文。邮箱授权码使用服务端 AES-256-GCM 加密存储（密钥从 AUTH_SECRET 派生）。
+3. **数据隔离**：所有 API 路由均通过 `getUserId()` 获取当前用户 ID，所有数据库查询都按 userId 过滤，确保用户间数据完全隔离。
+4. **定时任务**：通知检查和邮件扫描随 Next.js 服务启动自动运行，无需额外配置 cron job。
+5. **时区处理**：所有日期比较均规范化为当天零点后进行，避免 UTC 与本地时间差异导致的天数计算不一致。
+6. **PWA**：生产环境部署后可通过浏览器「安装到桌面」功能作为独立应用使用。
