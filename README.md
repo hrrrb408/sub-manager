@@ -435,6 +435,10 @@ curl -X POST http://localhost:3000/api/seed -b <your-auth-cookie>
 npm run dev              # 启动开发服务器
 npm run lint             # ESLint 代码检查
 
+# 测试
+npm test                 # 运行所有测试
+npm run test:watch       # 监听模式运行测试
+
 # 数据库
 npx prisma db push       # 推送 schema 变更到数据库
 npx prisma generate      # 重新生成 Prisma Client
@@ -442,6 +446,82 @@ npx prisma generate      # 重新生成 Prisma Client
 # 类型检查
 npx tsc --noEmit         # TypeScript 类型检查（推荐）
 ```
+
+## 测试
+
+项目使用 **Vitest** 作为测试框架，包含单元测试和 API 路由集成测试。
+
+### 测试结构
+
+```
+src/
+├── lib/__tests__/
+│   ├── types.test.ts            # getNextRenewalDate, formatAmount 等纯函数测试
+│   ├── server-crypto.test.ts    # AES-256-GCM 加解密测试
+│   └── email-providers.test.ts  # IMAP 提供商配置测试
+├── app/api/__tests__/
+│   ├── subscriptions.test.ts    # 订阅 CRUD API 测试（认证、过滤、重复检测）
+│   ├── budget.test.ts           # 预算 API 测试（默认值、upsert）
+│   ├── register.test.ts         # 注册 API 测试（验证、重复邮箱）
+│   └── email-connection.test.ts # 邮箱连接 API 测试（认证、加密、预设）
+└── __tests__/
+    ├── setup.ts                 # 全局测试配置
+    └── helpers.ts               # Mock 工具函数
+```
+
+### 运行测试
+
+```bash
+npm test                 # 运行全部测试
+npm run test:watch       # 监听模式（开发时使用）
+npx vitest run src/lib/  # 只运行单元测试
+```
+
+## Docker 部署
+
+### 一键启动（推荐）
+
+```bash
+# 1. 复制环境变量文件并填入配置
+cp .env.example .env
+# 编辑 .env，至少设置 AUTH_SECRET 和 DATABASE_URL
+
+# 2. 启动服务（包含 MySQL + 应用）
+docker compose up -d
+
+# 3. 查看日志
+docker compose logs -f app
+```
+
+启动后访问 http://localhost:3000。
+
+### 手动 Docker 构建
+
+```bash
+# 构建镜像
+docker build -t sub-manager .
+
+# 运行（需要外部 MySQL）
+docker run -p 3000:3000 \
+  -e DATABASE_URL="mysql://root:password@mysql-host:3306/sub_manager" \
+  -e AUTH_SECRET="your-secret" \
+  -e AUTH_URL="http://localhost:3000" \
+  sub-manager
+```
+
+### 开发模式 Docker
+
+```bash
+# 使用开发配置（支持热重载）
+docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+```
+
+### Docker Compose 服务说明
+
+| 服务 | 镜像 | 端口 | 说明 |
+|------|------|------|------|
+| mysql | mysql:8.0 | 3307:3306 | 数据库，数据持久化到 Docker volume |
+| app | 自构建 | 3000:3000 | Next.js 应用，依赖 MySQL 健康检查后启动 |
 
 ## 注意事项
 

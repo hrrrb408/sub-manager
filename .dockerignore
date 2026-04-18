@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.gitignore
+.env
+.env.local
+*.md
+Dockerfile
+docker-compose*.yml
+.dockerignore
+src/__tests__
+vitest.config.ts

@@ -1,0 +1,43 @@
+services:
+  mysql:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-submanager}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-sub_manager}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    ports:
+      - "3307:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3000}:3000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: mysql://root:${MYSQL_ROOT_PASSWORD:-submanager}@mysql:3306/${MYSQL_DATABASE:-sub_manager}
+      AUTH_SECRET: ${AUTH_SECRET:?AUTH_SECRET is required}
+      AUTH_URL: ${AUTH_URL:-http://localhost:3000}
+      # Optional: OAuth
+      # GITHUB_ID: ${GITHUB_ID:-}
+      # GITHUB_SECRET: ${GITHUB_SECRET:-}
+      # GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      # GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      # Optional: LLM email scanning
+      # LLM_API_URL: ${LLM_API_URL:-}
+      # LLM_API_KEY: ${LLM_API_KEY:-}
+      # LLM_MODEL: ${LLM_MODEL:-gpt-4o-mini}
+    env_file:
+      - .env
+
+volumes:
+  mysql_data:
