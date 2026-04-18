@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -48,7 +48,6 @@ export default function RegisterPage() {
         return;
       }
 
-      // Auto-login after registration
       const result = await signIn("credentials", {
         email,
         password,
@@ -69,78 +68,136 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center mb-4">
-            <span className="text-white text-xl font-bold">S</span>
+    <div className="min-h-screen flex">
+      {/* Left: Decorative */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <svg className="w-full h-full" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="white" strokeWidth="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+        </div>
+        <div className="relative z-10 flex flex-col justify-center px-16 text-white">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <span className="text-3xl font-bold">S</span>
+            </div>
+            <span className="text-2xl font-bold tracking-tight">SubManager</span>
           </div>
-          <CardTitle className="text-2xl">创建账号</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            开始管理你的订阅支出
+          <h2 className="text-4xl font-bold leading-tight mb-4">
+            开始管理<br />你的订阅
+          </h2>
+          <p className="text-lg text-white/70 max-w-md leading-relaxed">
+            注册后即可添加订阅、设置预算提醒、连接邮箱自动识别扣费。
           </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+          <div className="mt-12 space-y-4">
+            {["自动追踪订阅费用", "AI 识别邮件账单", "到期续费智能提醒", "多维度支出分析"].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 text-white/80">
+                <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-xs">
+                  {i + 1}
+                </div>
+                <span>{item}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Register form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-2 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <span className="text-white text-lg font-bold">S</span>
+            </div>
+            <span className="text-xl font-bold tracking-tight">SubManager</span>
+          </div>
+
+          <h1 className="text-2xl font-bold tracking-tight">创建账号</h1>
+          <p className="text-muted-foreground mt-1.5 mb-8">
+            填写以下信息开始使用
+          </p>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
             )}
+
             <div className="space-y-2">
-              <Label htmlFor="name">昵称（可选）</Label>
+              <Label htmlFor="name" className="text-sm font-medium">昵称（可选）</Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="你的名字"
+                className="h-11"
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="email">邮箱</Label>
+              <Label htmlFor="email" className="text-sm font-medium">邮箱</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
+                className="h-11"
                 required
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">密码</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="至少 6 个字符"
-                required
-              />
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-sm font-medium">密码</Label>
+                <Input
+                  id="password"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="至少 6 位"
+                  className="h-11"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword" className="text-sm font-medium">确认密码</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="再次输入"
+                  className="h-11"
+                  required
+                />
+              </div>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">确认密码</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="再次输入密码"
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "注册中..." : "注册"}
+
+            <Button
+              type="submit"
+              className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {loading ? "注册中..." : "创建账号"}
             </Button>
           </form>
 
-          <div className="relative">
+          <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <div className="w-full border-t" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                或使用第三方注册
+            <div className="relative flex justify-center">
+              <span className="bg-background px-3 text-xs text-muted-foreground uppercase tracking-wider">
+                其他方式
               </span>
             </div>
           </div>
@@ -148,6 +205,7 @@ export default function RegisterPage() {
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
+              className="h-11 font-medium"
               onClick={() => signIn("github", { callbackUrl: "/" })}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -157,6 +215,7 @@ export default function RegisterPage() {
             </Button>
             <Button
               variant="outline"
+              className="h-11 font-medium"
               onClick={() => signIn("google", { callbackUrl: "/" })}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -169,14 +228,14 @@ export default function RegisterPage() {
             </Button>
           </div>
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground mt-8">
             已有账号？{" "}
-            <Link href="/login" className="text-primary hover:underline font-medium">
+            <Link href="/login" className="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline">
               登录
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
+import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -42,58 +42,115 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center mb-4">
-            <span className="text-white text-xl font-bold">S</span>
+    <div className="min-h-screen flex">
+      {/* Left: Decorative */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-emerald-600 via-teal-600 to-cyan-700 relative overflow-hidden">
+        <div className="absolute inset-0 opacity-10">
+          <svg className="w-full h-full" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+                <path d="M 60 0 L 0 0 0 60" fill="none" stroke="white" strokeWidth="0.5"/>
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#grid)" />
+          </svg>
+        </div>
+        <div className="relative z-10 flex flex-col justify-center px-16 text-white">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center">
+              <span className="text-3xl font-bold">S</span>
+            </div>
+            <span className="text-2xl font-bold tracking-tight">SubManager</span>
           </div>
-          <CardTitle className="text-2xl">登录 SubManager</CardTitle>
-          <p className="text-sm text-muted-foreground mt-1">
-            管理你的订阅支出
+          <h2 className="text-4xl font-bold leading-tight mb-4">
+            掌控每一笔<br />订阅支出
+          </h2>
+          <p className="text-lg text-white/70 max-w-md leading-relaxed">
+            智能管理你的所有 SaaS 订阅，自动追踪费用、提醒续费、分析支出趋势。
           </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="mt-12 flex gap-8 text-white/60 text-sm">
+            <div>
+              <div className="text-2xl font-bold text-white">50+</div>
+              <div>支持平台</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">AI</div>
+              <div>邮件识别</div>
+            </div>
+            <div>
+              <div className="text-2xl font-bold text-white">0</div>
+              <div>数据泄露风险</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right: Login form */}
+      <div className="flex-1 flex items-center justify-center p-6 sm:p-12">
+        <div className="w-full max-w-sm">
+          {/* Mobile logo */}
+          <div className="lg:hidden flex items-center gap-2 mb-8">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+              <span className="text-white text-lg font-bold">S</span>
+            </div>
+            <span className="text-xl font-bold tracking-tight">SubManager</span>
+          </div>
+
+          <h1 className="text-2xl font-bold tracking-tight">欢迎回来</h1>
+          <p className="text-muted-foreground mt-1.5 mb-8">
+            登录你的账号以继续
+          </p>
+
+          <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+              <div className="rounded-lg bg-destructive/10 border border-destructive/20 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
             )}
+
             <div className="space-y-2">
-              <Label htmlFor="email">邮箱</Label>
+              <Label htmlFor="email" className="text-sm font-medium">邮箱</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="your@email.com"
+                className="h-11"
                 required
               />
             </div>
+
             <div className="space-y-2">
-              <Label htmlFor="password">密码</Label>
+              <Label htmlFor="password" className="text-sm font-medium">密码</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="输入密码"
+                className="h-11"
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
+
+            <Button
+              type="submit"
+              className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-medium"
+              disabled={loading}
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {loading ? "登录中..." : "登录"}
             </Button>
           </form>
 
-          <div className="relative">
+          <div className="relative my-8">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t" />
+              <div className="w-full border-t" />
             </div>
-            <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-card px-2 text-muted-foreground">
-                或使用第三方登录
+            <div className="relative flex justify-center">
+              <span className="bg-background px-3 text-xs text-muted-foreground uppercase tracking-wider">
+                其他方式
               </span>
             </div>
           </div>
@@ -101,6 +158,7 @@ export default function LoginPage() {
           <div className="grid grid-cols-2 gap-3">
             <Button
               variant="outline"
+              className="h-11 font-medium"
               onClick={() => signIn("github", { callbackUrl: "/" })}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24" fill="currentColor">
@@ -110,6 +168,7 @@ export default function LoginPage() {
             </Button>
             <Button
               variant="outline"
+              className="h-11 font-medium"
               onClick={() => signIn("google", { callbackUrl: "/" })}
             >
               <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
@@ -122,14 +181,14 @@ export default function LoginPage() {
             </Button>
           </div>
 
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-sm text-muted-foreground mt-8">
             还没有账号？{" "}
-            <Link href="/register" className="text-primary hover:underline font-medium">
-              注册
+            <Link href="/register" className="text-emerald-600 hover:text-emerald-700 font-semibold hover:underline">
+              创建账号
             </Link>
           </p>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }
