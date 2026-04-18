@@ -12,12 +12,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Key, Check, ShieldCheck } from "lucide-react";
+import { Key, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import {
   hasMasterKey,
   setMasterKey,
-  getMasterKey,
   encrypt,
   decrypt,
 } from "@/lib/crypto";
@@ -31,7 +30,6 @@ export function MasterKeySetup({ open, onOpenChange }: MasterKeySetupProps) {
   const isSetup = hasMasterKey();
   const [key, setKey] = useState("");
   const [confirmKey, setConfirmKey] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleSetup = () => {
     if (!key.trim()) {

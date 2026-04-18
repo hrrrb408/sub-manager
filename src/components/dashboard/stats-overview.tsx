@@ -7,9 +7,8 @@ import {
   TrendingUp,
   Package,
   CalendarClock,
-  RefreshCw,
 } from "lucide-react";
-import { formatAmount, getCurrencySymbol } from "@/lib/types";
+import { formatAmount } from "@/lib/types";
 
 interface StatsData {
   totalSubscriptions: number;
@@ -27,7 +26,6 @@ interface StatsOverviewProps {
 
 export function StatsOverview({ stats, currency }: StatsOverviewProps) {
   const [convertedMonthly, setConvertedMonthly] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
 
   // Convert multi-currency totals
   const breakdown = stats?.currencyBreakdown || {};
@@ -38,7 +36,6 @@ export function StatsOverview({ stats, currency }: StatsOverviewProps) {
       setConvertedMonthly(null);
       return;
     }
-    setLoading(true);
     fetch(`/api/exchange-rate?base=USD`)
       .then((r) => r.json())
       .then((data) => {
@@ -52,8 +49,7 @@ export function StatsOverview({ stats, currency }: StatsOverviewProps) {
         }
         setConvertedMonthly(Math.round(total * 100) / 100);
       })
-      .catch(() => setConvertedMonthly(null))
-      .finally(() => setLoading(false));
+      .catch(() => setConvertedMonthly(null));
   }, [hasMultiCurrency, stats?.currencyBreakdown, currency]);
 
   if (!stats) return null;

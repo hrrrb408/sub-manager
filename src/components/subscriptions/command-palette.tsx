@@ -25,7 +25,7 @@ interface CommandPaletteProps {
   onOpenChange: (open: boolean) => void
   subscriptions: Subscription[]
   onEdit: (sub: Subscription) => void
-  onRenew: (id: string) => void
+  onRenew?: () => void
   onAddNew: () => void
   onImport: () => void
   onExport: () => void
@@ -37,7 +37,6 @@ export function CommandPalette({
   onOpenChange,
   subscriptions,
   onEdit,
-  onRenew,
   onAddNew,
   onImport,
   onExport,

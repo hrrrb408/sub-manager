@@ -25,7 +25,7 @@ import {
 interface CalendarViewProps {
   subscriptions: Subscription[];
   onEdit: (sub: Subscription) => void;
-  onRenew: (id: string) => void;
+  onRenew?: () => void;
 }
 
 const CATEGORY_COLORS: Record<Category, string> = {
@@ -63,7 +63,6 @@ const WEEKDAYS = ["日", "一", "二", "三", "四", "五", "六"];
 export function CalendarView({
   subscriptions,
   onEdit,
-  onRenew,
 }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const today = new Date();

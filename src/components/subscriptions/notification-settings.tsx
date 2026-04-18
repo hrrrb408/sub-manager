@@ -24,7 +24,6 @@ import {
   AlertCircle,
   Clock,
   RefreshCw,
-  Trash2,
 } from "lucide-react";
 
 interface NotificationConfig {
