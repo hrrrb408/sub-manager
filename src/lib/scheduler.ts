@@ -1,56 +1,76 @@
 import * as cron from "node-cron";
 import { checkAndNotify } from "./notify";
+import { scanEmailsForUser } from "./email-scanner";
 import { prisma } from "./prisma";
 
-let scheduledTask: cron.ScheduledTask | null = null;
+let notifyTask: cron.ScheduledTask | null = null;
+let emailScanTask: cron.ScheduledTask | null = null;
 
-/**
- * 读取数据库中的 checkHour，启动/重启定时任务。
- * 每分钟检查一次，只在配置的小时执行通知。
- */
 export function startScheduler() {
-  if (scheduledTask) {
-    scheduledTask.stop();
-    scheduledTask = null;
-  }
+  stopScheduler();
 
-  scheduledTask = cron.schedule("* * * * *", async () => {
+  // Notification check: every minute, execute at configured hour
+  notifyTask = cron.schedule("* * * * *", async () => {
     const now = new Date();
     const hour = now.getHours();
     const minute = now.getMinutes();
 
-    // 只在每小时的第 0 分钟检查
     if (minute !== 0) return;
 
     try {
-      const config = await prisma.notificationConfig.findUnique({
-        where: { id: "default" },
+      const configs = await prisma.notificationConfig.findMany({
+        where: { checkHour: hour },
       });
-      if (!config) return;
 
-      const targetHour = config.checkHour ?? 9;
-      if (hour === targetHour) {
-        console.log(`[Scheduler] 执行定时检查 (每天 ${targetHour}:00)...`);
-        const result = await checkAndNotify();
-        if (result.sent > 0) {
-          console.log(`[Scheduler] 已发送 ${result.sent} 条通知`);
-        }
-        if (result.errors.length > 0) {
-          console.error("[Scheduler] 错误:", result.errors);
+      for (const config of configs) {
+        try {
+          const result = await checkAndNotify(config.userId);
+          if (result.sent > 0) {
+            console.log(`[Scheduler] 已发送 ${result.sent} 条通知 (用户 ${config.userId})`);
+          }
+        } catch (error) {
+          console.error(`[Scheduler] 用户 ${config.userId} 通知任务失败:`, error);
         }
       }
     } catch (error) {
-      console.error("[Scheduler] 定时任务执行失败:", error);
+      console.error("[Scheduler] 通知任务失败:", error);
     }
   });
 
-  console.log("[Scheduler] 定时检查已启动");
+  // Email scan: daily at 3 AM
+  emailScanTask = cron.schedule("0 3 * * *", async () => {
+    try {
+      const connections = await prisma.emailConnection.findMany({
+        where: { scanEnabled: true },
+        select: { userId: true },
+        distinct: ["userId"],
+      });
+
+      for (const { userId } of connections) {
+        try {
+          const result = await scanEmailsForUser(userId);
+          if (result.found > 0) {
+            console.log(`[EmailScan] 用户 ${userId}: 发现 ${result.found} 条订阅`);
+          }
+        } catch (error) {
+          console.error(`[EmailScan] 用户 ${userId} 扫描失败:`, error);
+        }
+      }
+    } catch (error) {
+      console.error("[EmailScan] 定时扫描失败:", error);
+    }
+  });
+
+  console.log("[Scheduler] 定时任务已启动 (通知 + 邮件扫描)");
 }
 
 export function stopScheduler() {
-  if (scheduledTask) {
-    scheduledTask.stop();
-    scheduledTask = null;
-    console.log("[Scheduler] 定时检查已停止");
+  if (notifyTask) {
+    notifyTask.stop();
+    notifyTask = null;
+  }
+  if (emailScanTask) {
+    emailScanTask.stop();
+    emailScanTask = null;
   }
 }

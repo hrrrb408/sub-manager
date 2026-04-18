@@ -1,10 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { getUserId } from "@/lib/get-user";
 import { getNextRenewalDate, type BillingCycle } from "@/lib/types";
 import { NextResponse } from "next/server";
 
 export async function GET() {
   try {
-    const subscriptions = await prisma.subscription.findMany();
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
+    const subscriptions = await prisma.subscription.findMany({
+      where: { userId },
+    });
 
     const now = new Date();
     now.setHours(0, 0, 0, 0);

@@ -1,12 +1,16 @@
 import { prisma } from "@/lib/prisma";
+import { getUserId } from "@/lib/get-user";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const [subscriptions, notificationConfig, budgetConfig] = await Promise.all([
-      prisma.subscription.findMany({ orderBy: { createdAt: "asc" } }),
-      prisma.notificationConfig.findUnique({ where: { id: "default" } }),
-      prisma.budgetConfig.findUnique({ where: { id: "default" } }),
+      prisma.subscription.findMany({ where: { userId }, orderBy: { createdAt: "asc" } }),
+      prisma.notificationConfig.findUnique({ where: { userId } }),
+      prisma.budgetConfig.findUnique({ where: { userId } }),
     ]);
 
     const backup = {
@@ -37,6 +41,9 @@ export async function GET() {
 
 export async function PUT(request: NextRequest) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const body = await request.json();
 
     if (!body.subscriptions || !Array.isArray(body.subscriptions)) {
@@ -51,13 +58,14 @@ export async function PUT(request: NextRequest) {
     const budgetConfig = body.budgetConfig;
 
     const result = await prisma.$transaction(async (tx) => {
-      // 1. Delete all existing subscriptions
-      await tx.subscription.deleteMany();
+      // 1. Delete all existing subscriptions for this user
+      await tx.subscription.deleteMany({ where: { userId } });
 
-      // 2. Create all subscriptions from backup
+      // 2. Create all subscriptions from backup with userId
       if (subscriptions.length > 0) {
         const createData = subscriptions.map((sub: Record<string, unknown>) => ({
           id: (sub.id as string) || undefined,
+          userId,
           name: sub.name as string,
           platform: sub.platform as string,
           plan: sub.plan as string,
@@ -84,7 +92,7 @@ export async function PUT(request: NextRequest) {
       if (notificationConfig && typeof notificationConfig === "object") {
         const nc = notificationConfig as Record<string, unknown>;
         await tx.notificationConfig.upsert({
-          where: { id: "default" },
+          where: { userId },
           update: {
             emailEnabled: (nc.emailEnabled as boolean) ?? false,
             smtpHost: (nc.smtpHost as string) || null,
@@ -100,7 +108,7 @@ export async function PUT(request: NextRequest) {
             checkHour: (nc.checkHour as number) ?? 9,
           },
           create: {
-            id: "default",
+            userId,
             emailEnabled: (nc.emailEnabled as boolean) ?? false,
             smtpHost: (nc.smtpHost as string) || null,
             smtpPort: (nc.smtpPort as number) ?? 465,
@@ -121,14 +129,14 @@ export async function PUT(request: NextRequest) {
       if (budgetConfig && typeof budgetConfig === "object") {
         const bc = budgetConfig as Record<string, unknown>;
         await tx.budgetConfig.upsert({
-          where: { id: "default" },
+          where: { userId },
           update: {
             monthlyBudget: typeof bc.monthlyBudget === "number" ? bc.monthlyBudget : 0,
             yearlyBudget: typeof bc.yearlyBudget === "number" ? bc.yearlyBudget : 0,
             currency: (bc.currency as string) || "USD",
           },
           create: {
-            id: "default",
+            userId,
             monthlyBudget: typeof bc.monthlyBudget === "number" ? bc.monthlyBudget : 0,
             yearlyBudget: typeof bc.yearlyBudget === "number" ? bc.yearlyBudget : 0,
             currency: (bc.currency as string) || "USD",

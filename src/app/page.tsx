@@ -3,6 +3,7 @@
 import "@/lib/register-sw";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { signOut } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -20,6 +21,8 @@ import {
   Calendar,
   Keyboard,
   MoreVertical,
+  LogOut,
+  User,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -45,7 +48,10 @@ import { BudgetAlert } from "@/components/subscriptions/budget-alert";
 import { CommandPalette } from "@/components/subscriptions/command-palette";
 import { AnnualReport } from "@/components/subscriptions/annual-report";
 import { BackupRestore } from "@/components/subscriptions/backup-restore";
+import { EmailScanSettings } from "@/components/subscriptions/email-scan-settings";
+import { DiscoveredSubs } from "@/components/subscriptions/discovered-subs";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { useAuth } from "@/lib/auth-context";
 import {
   formatAmount,
   BILLING_CYCLE_MAP,
@@ -55,6 +61,7 @@ import {
 } from "@/lib/types";
 
 export default function HomePage() {
+  const { user } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [stats, setStats] = useState<Record<string, unknown> | null>(null);
@@ -439,6 +446,24 @@ export default function HomePage() {
                     <Keyboard className="h-4 w-4 mr-2" />
                     命令面板
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    退出登录
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* User avatar + logout (desktop) */}
+              <DropdownMenu>
+                <DropdownMenuTrigger className="hidden sm:flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary text-sm font-medium hover:bg-primary/20">
+                  {user?.name?.[0] || user?.email?.[0] || <User className="h-4 w-4" />}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <div className="px-2 py-1.5 text-sm font-medium">{user?.name || user?.email}</div>
+                  <DropdownMenuItem onClick={() => signOut({ callbackUrl: "/login" })}>
+                    <LogOut className="h-4 w-4 mr-2" />
+                    退出登录
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -654,7 +679,10 @@ export default function HomePage() {
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6 max-w-2xl">
             <ErrorBoundary>
+            <DiscoveredSubs onImport={() => fetchSubscriptions()} />
             <NotificationSettings />
+            <Separator />
+            <EmailScanSettings onScanComplete={() => fetchSubscriptions()} />
             <Separator />
             <BackupRestore />
             </ErrorBoundary>

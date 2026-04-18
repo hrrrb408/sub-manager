@@ -1,15 +1,19 @@
 import { prisma } from "@/lib/prisma";
+import { getUserId } from "@/lib/get-user";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
     const category = searchParams.get("category");
     const platform = searchParams.get("platform");
     const search = searchParams.get("search");
 
-    const where: Record<string, unknown> = {};
+    const where: Record<string, unknown> = { userId };
 
     if (status) where.status = status;
     if (category) where.category = category;
@@ -62,11 +66,15 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const body = await request.json();
 
     // Duplicate detection: same name + platform
     const existing = await prisma.subscription.findFirst({
       where: {
+        userId,
         name: body.name,
         platform: body.platform,
         status: { in: ["active", "trialing"] },
@@ -81,6 +89,7 @@ export async function POST(request: NextRequest) {
 
     const subscription = await prisma.subscription.create({
       data: {
+        userId,
         name: body.name,
         platform: body.platform,
         plan: body.plan,

@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getUserId } from "@/lib/get-user";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(
@@ -6,8 +7,11 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const { id } = await params;
-    const subscription = await prisma.subscription.findUnique({ where: { id } });
+    const subscription = await prisma.subscription.findUnique({ where: { id, userId } });
     if (!subscription) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -23,10 +27,13 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const { id } = await params;
     const body = await request.json();
     const subscription = await prisma.subscription.update({
-      where: { id },
+      where: { id, userId },
       data: {
         name: body.name,
         platform: body.platform,
@@ -60,8 +67,11 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const { id } = await params;
-    await prisma.subscription.delete({ where: { id } });
+    await prisma.subscription.delete({ where: { id, userId } });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Failed to delete subscription:", error);

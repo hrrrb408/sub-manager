@@ -1,9 +1,13 @@
 import { prisma } from "@/lib/prisma";
+import { getUserId } from "@/lib/get-user";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET() {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
   const config = await prisma.budgetConfig.findUnique({
-    where: { id: "default" },
+    where: { userId },
   });
 
   if (!config) {
@@ -19,6 +23,9 @@ export async function GET() {
 }
 
 export async function PUT(request: NextRequest) {
+  const userId = await getUserId();
+  if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
   const body = await request.json();
 
   const data = {
@@ -28,9 +35,9 @@ export async function PUT(request: NextRequest) {
   };
 
   const config = await prisma.budgetConfig.upsert({
-    where: { id: "default" },
+    where: { userId },
     update: data,
-    create: { id: "default", ...data },
+    create: { userId, ...data },
   });
 
   return NextResponse.json(config);

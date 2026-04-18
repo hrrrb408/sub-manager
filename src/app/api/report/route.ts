@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
+import { getUserId } from "@/lib/get-user";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const { searchParams } = new URL(request.url);
     const yearParam = searchParams.get("year");
     const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
@@ -14,7 +18,9 @@ export async function GET(request: NextRequest) {
     const yearStart = new Date(year, 0, 1);
     const yearEnd = new Date(year + 1, 0, 1);
 
-    const subscriptions = await prisma.subscription.findMany();
+    const subscriptions = await prisma.subscription.findMany({
+      where: { userId },
+    });
 
     // Filter subscriptions relevant to the given year
     const relevantSubscriptions = subscriptions.filter((s) => {

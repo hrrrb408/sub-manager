@@ -19,7 +19,7 @@ async function sendEmail(config: EmailConfig, subject: string, html: string) {
     port: config.port,
     secure: config.port === 465,
     auth: { user: config.user, pass: config.pass },
-  });
+  } as nodemailer.TransportOptions);
 
   const recipients = config.to.split(",").map((s) => s.trim()).filter(Boolean);
 
@@ -102,9 +102,9 @@ export async function sendWebhook(
   }
 }
 
-export async function checkAndNotify() {
+export async function checkAndNotify(userId: string) {
   const config = await prisma.notificationConfig.findUnique({
-    where: { id: "default" },
+    where: { userId },
   });
 
   if (!config) return { sent: 0, errors: [] };
@@ -112,7 +112,7 @@ export async function checkAndNotify() {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
   const subscriptions = await prisma.subscription.findMany({
-    where: { status: "active" },
+    where: { userId, status: "active" },
   });
 
   // Find subscriptions expiring within remindDays (auto-calculate renewal date)
@@ -199,14 +199,14 @@ export async function checkAndNotify() {
       );
 
       await prisma.notificationLog.create({
-        data: { type: "email", status: "success", title, content: text },
+        data: { userId, type: "email", status: "success", title, content: text },
       });
       results.sent++;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "邮件发送失败";
       results.errors.push(`邮件: ${msg}`);
       await prisma.notificationLog.create({
-        data: { type: "email", status: "failed", title, error: msg },
+        data: { userId, type: "email", status: "failed", title, error: msg },
       });
     }
   }
@@ -216,14 +216,14 @@ export async function checkAndNotify() {
     try {
       await sendWebhook(config.webhookUrl, config.webhookType, title, text);
       await prisma.notificationLog.create({
-        data: { type: "webhook", status: "success", title, content: text },
+        data: { userId, type: "webhook", status: "success", title, content: text },
       });
       results.sent++;
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Webhook 发送失败";
       results.errors.push(`Webhook: ${msg}`);
       await prisma.notificationLog.create({
-        data: { type: "webhook", status: "failed", title, error: msg },
+        data: { userId, type: "webhook", status: "failed", title, error: msg },
       });
     }
   }

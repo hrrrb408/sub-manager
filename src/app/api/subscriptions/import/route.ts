@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getUserId } from "@/lib/get-user";
 import { NextRequest, NextResponse } from "next/server";
 
 const BILLING_CYCLE_MAP: Record<string, string> = {
@@ -50,6 +51,9 @@ function mapValue(
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = await getUserId();
+    if (!userId) return NextResponse.json({ error: "未授权" }, { status: 401 });
+
     const body = await request.json();
 
     if (!Array.isArray(body)) {
@@ -108,6 +112,7 @@ export async function POST(request: NextRequest) {
       }
 
       validRows.push({
+        userId,
         name: String(row.name).trim(),
         platform: String(row.platform).trim(),
         plan: row.plan ? String(row.plan).trim() : "",
