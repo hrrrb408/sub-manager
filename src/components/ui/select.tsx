@@ -18,11 +18,24 @@ function SelectGroup({ className, ...props }: SelectPrimitive.Group.Props) {
   )
 }
 
-function SelectValue({ className, ...props }: SelectPrimitive.Value.Props) {
+function SelectValue({ className, children, placeholder, style, ...props }: SelectPrimitive.Value.Props) {
+  if (children !== undefined && typeof children !== 'function') {
+    return (
+      <span
+        data-slot="select-value"
+        className={cn("flex flex-1 text-left", className)}
+        style={typeof style === 'function' ? undefined : style}
+      >
+        {children}
+      </span>
+    )
+  }
   return (
     <SelectPrimitive.Value
       data-slot="select-value"
       className={cn("flex flex-1 text-left", className)}
+      placeholder={placeholder}
+      style={style}
       {...props}
     />
   )

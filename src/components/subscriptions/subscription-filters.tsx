@@ -10,7 +10,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Search, LayoutGrid, List, Calendar, X, SlidersHorizontal } from "lucide-react";
-import { PLATFORMS, CATEGORIES } from "@/lib/types";
+import { PLATFORMS, CATEGORIES, STATUS_MAP } from "@/lib/types";
 
 interface SubscriptionFiltersProps {
   search: string;
@@ -102,7 +102,7 @@ export function SubscriptionFilters({
       <div className="flex items-center gap-2 flex-wrap">
         <Select value={status} onValueChange={(v) => v && onStatusChange(v)}>
           <SelectTrigger className="w-[110px] sm:w-[120px] h-8 text-xs">
-            <SelectValue placeholder="状态" />
+            <SelectValue placeholder="全部状态">{!status || status === "all" ? "全部状态" : STATUS_MAP[status as keyof typeof STATUS_MAP]?.label ?? status}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">全部状态</SelectItem>
@@ -115,7 +115,7 @@ export function SubscriptionFilters({
 
         <Select value={category} onValueChange={(v) => v && onCategoryChange(v)}>
           <SelectTrigger className="w-[110px] sm:w-[120px] h-8 text-xs">
-            <SelectValue placeholder="分类" />
+            <SelectValue placeholder="全部分类">{!category || category === "all" ? "全部分类" : CATEGORIES.find(c => c.value === category)?.label ?? category}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">全部分类</SelectItem>
@@ -129,7 +129,7 @@ export function SubscriptionFilters({
 
         <Select value={platform} onValueChange={(v) => v && onPlatformChange(v)}>
           <SelectTrigger className="w-[120px] sm:w-[140px] h-8 text-xs">
-            <SelectValue placeholder="平台" />
+            <SelectValue placeholder="全部平台">{!platform || platform === "all" ? "全部平台" : platform}</SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">全部平台</SelectItem>

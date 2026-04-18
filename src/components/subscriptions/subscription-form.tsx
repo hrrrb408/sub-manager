@@ -25,6 +25,7 @@ import {
   CURRENCIES,
   CATEGORIES,
   BILLING_CYCLE_MAP,
+  STATUS_MAP,
   formatAmount,
   type SubscriptionFormData,
   type Subscription,
@@ -186,7 +187,7 @@ export function SubscriptionForm({
             <div className="space-y-2">
               <Label htmlFor="platform">平台 *</Label>
               <Select value={form.platform} onValueChange={(v) => v && updateField("platform", v)}>
-                <SelectTrigger><SelectValue placeholder="选择平台" /></SelectTrigger>
+                <SelectTrigger><SelectValue placeholder="选择平台">{form.platform || "选择平台"}</SelectValue></SelectTrigger>
                 <SelectContent>
                   {PLATFORMS.map((p) => (<SelectItem key={p} value={p}>{p}</SelectItem>))}
                 </SelectContent>
@@ -203,7 +204,7 @@ export function SubscriptionForm({
             <div className="space-y-2">
               <Label htmlFor="category">分类</Label>
               <Select value={form.category} onValueChange={(v) => v && updateField("category", v as SubscriptionFormData["category"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue>{CATEGORIES.find(c => c.value === form.category)?.label ?? form.category}</SelectValue></SelectTrigger>
                 <SelectContent>
                   {CATEGORIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
                 </SelectContent>
@@ -216,7 +217,7 @@ export function SubscriptionForm({
             <div className="space-y-2">
               <Label htmlFor="currency">币种</Label>
               <Select value={form.currency} onValueChange={(v) => v && updateField("currency", v)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue>{CURRENCIES.find(c => c.value === form.currency)?.label ?? form.currency}</SelectValue></SelectTrigger>
                 <SelectContent>
                   {CURRENCIES.map((c) => (<SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>))}
                 </SelectContent>
@@ -225,7 +226,7 @@ export function SubscriptionForm({
             <div className="space-y-2">
               <Label htmlFor="billingCycle">计费周期</Label>
               <Select value={form.billingCycle} onValueChange={(v) => v && updateField("billingCycle", v as SubscriptionFormData["billingCycle"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue>{BILLING_CYCLE_MAP[form.billingCycle] ?? form.billingCycle}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="monthly">月付</SelectItem>
                   <SelectItem value="yearly">年付</SelectItem>
@@ -248,7 +249,7 @@ export function SubscriptionForm({
             <div className="space-y-2">
               <Label htmlFor="status">状态</Label>
               <Select value={form.status} onValueChange={(v) => v && updateField("status", v as SubscriptionFormData["status"])}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectTrigger><SelectValue>{STATUS_MAP[form.status]?.label ?? form.status}</SelectValue></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="active">活跃</SelectItem>
                   <SelectItem value="trialing">试用中</SelectItem>
