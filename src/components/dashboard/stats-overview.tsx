@@ -6,7 +6,6 @@ import {
   DollarSign,
   TrendingUp,
   Package,
-  AlertTriangle,
   CalendarClock,
   RefreshCw,
 } from "lucide-react";

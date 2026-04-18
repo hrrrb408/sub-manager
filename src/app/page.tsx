@@ -18,7 +18,6 @@ import {
   Inbox,
   Settings,
   Upload,
-  Calendar,
   Keyboard,
   MoreVertical,
   LogOut,
@@ -41,7 +40,7 @@ import { SubscriptionFilters } from "@/components/subscriptions/subscription-fil
 import { DeleteDialog } from "@/components/subscriptions/delete-dialog";
 import { NotificationSettings } from "@/components/subscriptions/notification-settings";
 import { ExpenseCharts } from "@/components/charts/expense-charts";
-import { StatsSkeleton, CardGridSkeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { StatsSkeleton, CardGridSkeleton } from "@/components/ui/skeleton";
 import { CalendarView } from "@/components/subscriptions/calendar-view";
 import { ImportDialog } from "@/components/subscriptions/import-dialog";
 import { BudgetAlert } from "@/components/subscriptions/budget-alert";
@@ -51,7 +50,6 @@ import { BackupRestore } from "@/components/subscriptions/backup-restore";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useAuth } from "@/lib/auth-context";
 import {
-  formatAmount,
   BILLING_CYCLE_MAP,
   CATEGORIES,
   STATUS_MAP,
@@ -73,7 +71,7 @@ export default function HomePage() {
 
   // Delete dialog
   const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
-  const [deleting, setDeleting] = useState(false);
+  const [deleting] = useState(false);
 
   // Import dialog
   const [importOpen, setImportOpen] = useState(false);
@@ -225,20 +223,7 @@ export default function HomePage() {
     fetchStats();
   };
 
-  const handleFormSubmitted = (newSub: Subscription, isEdit: boolean) => {
-    if (isEdit) {
-      setSubscriptions((prev) =>
-        prev.map((s) => (s.id === newSub.id ? newSub : s))
-      );
-      toast.success(`已更新「${newSub.name}」`);
-    } else {
-      setSubscriptions((prev) => [newSub, ...prev]);
-      toast.success("订阅已添加");
-    }
-    fetchStats();
-  };
-
-  const handleRenew = (_id: string) => {
+  const handleRenew = () => {
     fetchSubscriptions();
     fetchStats();
     toast.success("续费成功，到期日已更新");
@@ -309,29 +294,6 @@ export default function HomePage() {
     toast.success(`已导出 ${subscriptions.length} 条订阅数据`);
   };
 
-  const exportJSON = () => {
-    const data = subscriptions.map((s) => ({
-      名称: s.name,
-      平台: s.platform,
-      计划: s.plan,
-      金额: s.amount,
-      币种: s.currency,
-      计费周期: BILLING_CYCLE_MAP[s.billingCycle as keyof typeof BILLING_CYCLE_MAP],
-      状态: STATUS_MAP[s.status as keyof typeof STATUS_MAP]?.label || s.status,
-      分类: CATEGORIES.find((c) => c.value === s.category)?.label || s.category,
-      开始日期: s.startDate?.split("T")[0] || "",
-      到期日期: s.endDate?.split("T")[0] || "",
-      支付方式: s.paymentMethod || "",
-      备注: s.description || "",
-      网址: s.url || "",
-    }));
-    downloadFile(
-      JSON.stringify(data, null, 2),
-      "subscriptions.json",
-      "application/json"
-    );
-    toast.success(`已导出 ${subscriptions.length} 条订阅数据`);
-  };
 
   const downloadFile = (content: string, filename: string, type: string) => {
     const blob = new Blob([content], { type });

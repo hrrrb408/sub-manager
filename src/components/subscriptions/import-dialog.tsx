@@ -68,7 +68,7 @@ const CSV_HEADER_MAP: Record<string, string> = {
 
 function parseCSV(text: string): ParsedRow[] {
   // Remove BOM
-  let clean = text.replace(/^\uFEFF/, "");
+  const clean = text.replace(/^\uFEFF/, "");
   const lines = clean.split(/\r?\n/).filter((line) => line.trim());
   if (lines.length < 2) return [];
 

@@ -1,4 +1,3 @@
-import { prisma } from "@/lib/prisma";
 import { getUserId } from "@/lib/get-user";
 import { checkAndNotify } from "@/lib/notify";
 import { NextResponse } from "next/server";
