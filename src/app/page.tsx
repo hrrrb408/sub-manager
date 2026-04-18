@@ -723,6 +723,7 @@ export default function HomePage() {
         }}
       />
 
+      {commandOpen && (
       <CommandPalette
         open={commandOpen}
         onOpenChange={setCommandOpen}
@@ -734,6 +735,7 @@ export default function HomePage() {
         onExport={exportCSV}
         onNavigate={setActiveTab}
       />
+      )}
     </div>
   );
 }
