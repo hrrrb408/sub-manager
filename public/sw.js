@@ -48,7 +48,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: cache first, fallback to network
+  // Static assets: cache first, fallback to network (GET only)
+  if (request.method !== "GET") return;
+
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached;

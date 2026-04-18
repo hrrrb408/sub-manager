@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: "SubManager - 订阅管理平台",
   description: "管理你的所有 SaaS 订阅，追踪费用，掌控预算",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#10b981",
 };
 
