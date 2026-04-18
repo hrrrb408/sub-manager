@@ -80,7 +80,7 @@ export function ExpenseCharts({ stats, currency }: ExpenseChartsProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <AreaChart data={trendData}>
                 <defs>
                   <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
@@ -131,7 +131,7 @@ export function ExpenseCharts({ stats, currency }: ExpenseChartsProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <PieChart>
                 <Pie
                   data={categoryData}
@@ -179,7 +179,7 @@ export function ExpenseCharts({ stats, currency }: ExpenseChartsProps) {
         </CardHeader>
         <CardContent>
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
               <BarChart data={platformData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
                 <XAxis
