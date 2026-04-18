@@ -1,0 +1,71 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Subscription {
+  id            String   @id @default(cuid())
+  name          String
+  platform      String
+  plan          String
+  amount        Float
+  currency      String   @default("USD")
+  billingCycle  String   @default("monthly")
+  status        String   @default("active")
+  category      String   @default("other")
+  startDate     DateTime
+  endDate       DateTime?
+  paymentMethod      String?
+  account            String?   // 登录账号/邮箱
+  encryptedPassword  String?   // AES 加密后的密码
+  description        String?
+  url           String?
+  logoUrl       String?
+  color         String?
+  remindDays    Int      @default(7)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([status])
+  @@index([endDate])
+  @@index([category])
+  @@index([platform])
+}
+
+model NotificationConfig {
+  id              String   @id @default("default")
+  // Email (SMTP)
+  emailEnabled    Boolean  @default(false)
+  smtpHost        String?
+  smtpPort        Int      @default(465)
+  smtpUser        String?
+  smtpPass        String?  // 建议使用应用专用密码
+  emailFrom       String?  // 发件人地址
+  emailTo         String?  // 收件人地址，多个用逗号分隔
+  // Webhook (钉钉/企微/飞书)
+  webhookEnabled  Boolean  @default(false)
+  webhookType     String?  // dingtalk / wecom / feishu
+  webhookUrl      String?
+  webhookSecret   String?  // 飞书签名密钥等
+  // 通用设置
+  checkHour       Int      @default(9) // 每天几点检查（24h制）
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model NotificationLog {
+  id          String   @id @default(cuid())
+  type        String   // email / webhook
+  status      String   // success / failed
+  title       String
+  content     String?
+  error       String?
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type])
+}
