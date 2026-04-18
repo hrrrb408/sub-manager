@@ -1,6 +1,6 @@
 # SubManager - 订阅管理平台
 
-一个功能完整的 SaaS 订阅管理平台，支持多用户注册登录，可追踪和管理各类在线服务订阅支出，还能通过 IMAP 自动扫描邮箱账单并智能识别订阅。
+一个功能完整的 SaaS 订阅管理平台，支持多用户注册登录，追踪和管理各类在线服务订阅支出。
 
 ## 功能特性
 
@@ -24,15 +24,6 @@
 - **重复检测** — 添加订阅时实时检测同名同平台的活跃订阅，即时显示警告
 - **软删除** — 删除订阅后支持 5 秒内撤销，防止误操作
 - **批量导入** — 支持 CSV / JSON 文件拖拽导入，自动中英文字段映射和数据预览
-
-### 邮箱账单扫描（AI 智能识别）
-
-- **IMAP 邮箱连接** — 支持 QQ 邮箱、163、Gmail、Outlook 等，一键配置
-- **自动扫描** — 连接邮箱后自动扫描最近 30 天的支付账单邮件
-- **LLM 智能解析** — 调用大语言模型（OpenAI / DeepSeek / Ollama 等）自动提取订阅信息
-- **审核导入** — 扫描结果需人工审核确认后才导入，支持编辑修正
-- **定期自动扫描** — 每天凌晨 3 点自动扫描所有已启用的邮箱连接
-- **密码安全** — 邮箱授权码使用 AES-256-GCM 服务端加密存储
 
 ### 日历视图
 
@@ -94,10 +85,8 @@
 | 样式 | Tailwind CSS v4 (OKLCH 色彩空间) |
 | 图表 | Recharts 3 |
 | 邮件 | Nodemailer 8 |
-| 邮件扫描 | imapflow + mailparser |
 | 定时任务 | node-cron 4 |
 | 客户端加密 | crypto-js (AES) |
-| 服务端加密 | Node.js crypto (AES-256-GCM) |
 | 日期 | date-fns 4 |
 | 命令面板 | cmdk |
 | 通知 | Sonner |
@@ -141,11 +130,6 @@ AUTH_URL="http://localhost:3000"
 # GITHUB_SECRET=""
 # GOOGLE_CLIENT_ID=""
 # GOOGLE_CLIENT_SECRET=""
-
-# 邮箱扫描 LLM 配置（可选，不配置则无法使用智能扫描功能）
-# LLM_API_URL="https://api.openai.com/v1/chat/completions"
-# LLM_API_KEY=""
-# LLM_MODEL="gpt-4o-mini"
 ```
 
 ### 4. 初始化数据库
@@ -193,15 +177,6 @@ curl -X POST http://localhost:3000/api/seed -b <your-auth-cookie>
 
 - **一键续费**：在订阅卡片/表格中点击「续费」按钮，系统自动按计费周期延长到期日期
 - **手动编辑**：点击「编辑」按钮，手动修改到期日期和其他信息
-
-### 邮箱账单扫描
-
-1. 切换到「设置」标签页，找到「邮箱扫描」区域
-2. 点击「添加邮箱」，选择邮箱提供商（QQ/163/Gmail/Outlook）
-3. 输入邮箱地址和授权码（非登录密码，需在邮箱设置中开启 IMAP 并获取）
-4. 点击「开始扫描」，系统会扫描最近 30 天的邮件
-5. 扫描完成后，在「发现订阅」区域查看识别结果
-6. 确认信息无误后点击「导入」，也可先编辑修正再导入
 
 ### 配置到期通知
 
@@ -271,14 +246,9 @@ curl -X POST http://localhost:3000/api/seed -b <your-auth-cookie>
 │   │       ├── notify-check/        # 触发检查 + 发送通知
 │   │       ├── notify-test/         # 发送测试通知
 │   │       ├── notify-logs/         # 通知日志
-│   │       ├── email-connection/    # 邮箱连接管理
-│   │       ├── email-scan/          # 邮件扫描触发
-│   │       ├── email-scan/discovered/  # 发现的订阅
-│   │       ├── email-scan/import/      # 导入发现的订阅
-│   │       ├── email-scan/dismiss/     # 忽略发现的订阅
 │   │       └── seed/                 # 演示数据
 │   ├── components/
-│   │   ├── subscriptions/     # 业务组件（表单、卡片、表格、邮箱扫描等）
+│   │   ├── subscriptions/     # 业务组件（表单、卡片、表格等）
 │   │   ├── dashboard/         # 仪表盘组件
 │   │   ├── charts/            # 图表组件
 │   │   ├── ui/                # shadcn/ui 基础组件
@@ -291,10 +261,6 @@ curl -X POST http://localhost:3000/api/seed -b <your-auth-cookie>
 │       ├── prisma.ts          # Prisma 单例
 │       ├── types.ts           # 类型定义、常量、工具函数
 │       ├── crypto.ts          # 客户端 AES 加密/解密
-│       ├── server-crypto.ts   # 服务端 AES-256-GCM 加密
-│       ├── email-providers.ts # IMAP 邮箱提供商预设
-│       ├── llm-parser.ts      # LLM 邮件解析
-│       ├── email-scanner.ts   # IMAP 邮件扫描引擎
 │       ├── notify.ts          # 通知发送服务
 │       ├── scheduler.ts       # 定时任务调度器
 │       ├── register-sw.ts     # Service Worker 注册
@@ -335,31 +301,6 @@ curl -X POST http://localhost:3000/api/seed -b <your-auth-cookie>
 | encryptedPassword | String? | AES 加密后的密码 |
 | remindDays | Int | 提前提醒天数（默认 7） |
 
-### EmailConnection（邮箱连接）
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| userId | String | 所属用户 |
-| provider | String | 邮箱提供商（qq/163/gmail/outlook/custom） |
-| imapHost | String | IMAP 服务器地址 |
-| imapPort | Int | IMAP 端口 |
-| email | String | 邮箱地址 |
-| encryptedPassword | String | AES-256-GCM 加密的授权码 |
-| scanEnabled | Boolean | 是否启用定期扫描 |
-| lastScanAt | DateTime? | 上次扫描时间 |
-
-### DiscoveredSubscription（发现的订阅）
-
-| 字段 | 类型 | 说明 |
-|------|------|------|
-| userId | String | 所属用户 |
-| serviceName | String | 识别出的服务名称 |
-| amount | Float? | 识别出的金额 |
-| currency | String? | 币种 |
-| billingCycle | String? | 计费周期 |
-| confidence | Float | 识别置信度（0-1） |
-| status | String | 状态（pending/imported/dismissed） |
-
 ### 其他模型
 
 - **NotificationConfig** — 每用户通知配置（SMTP、Webhook、定时检查时间）
@@ -386,19 +327,6 @@ curl -X POST http://localhost:3000/api/seed -b <your-auth-cookie>
 | DELETE | `/api/subscriptions/[id]` | 删除订阅 |
 | POST | `/api/subscriptions/[id]/renew` | 续费 |
 | POST | `/api/subscriptions/import` | 批量导入 |
-
-### 邮箱扫描
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/api/email-connection` | 获取邮箱连接列表 |
-| POST | `/api/email-connection` | 添加邮箱连接 |
-| DELETE | `/api/email-connection/[id]` | 删除邮箱连接 |
-| PATCH | `/api/email-connection/[id]` | 更新邮箱连接（启用/禁用扫描） |
-| POST | `/api/email-scan` | 触发邮件扫描 |
-| GET | `/api/email-scan/discovered` | 获取发现的订阅 |
-| POST | `/api/email-scan/import` | 导入发现的订阅 |
-| POST | `/api/email-scan/dismiss` | 忽略发现的订阅 |
 
 ### 统计分析
 
@@ -457,13 +385,11 @@ npx tsc --noEmit         # TypeScript 类型检查（推荐）
 src/
 ├── lib/__tests__/
 │   ├── types.test.ts            # getNextRenewalDate, formatAmount 等纯函数测试
-│   ├── server-crypto.test.ts    # AES-256-GCM 加解密测试
-│   └── email-providers.test.ts  # IMAP 提供商配置测试
+│   └── server-crypto.test.ts    # AES-256-GCM 加解密测试
 ├── app/api/__tests__/
 │   ├── subscriptions.test.ts    # 订阅 CRUD API 测试（认证、过滤、重复检测）
 │   ├── budget.test.ts           # 预算 API 测试（默认值、upsert）
-│   ├── register.test.ts         # 注册 API 测试（验证、重复邮箱）
-│   └── email-connection.test.ts # 邮箱连接 API 测试（认证、加密、预设）
+│   └── register.test.ts         # 注册 API 测试（验证、重复邮箱）
 └── __tests__/
     ├── setup.ts                 # 全局测试配置
     └── helpers.ts               # Mock 工具函数
@@ -526,8 +452,8 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up
 ## 注意事项
 
 1. **Turbopack 中文路径问题**：项目路径包含中文字符时，Turbopack 生成内部标识符可能出现 UTF-8 字节切割错误。已在 `next.config.ts` 中设置 `turbopack.root` 为项目目录来规避此问题。
-2. **密码安全**：订阅密码在客户端通过 AES 加密后才发送到服务器，服务端永远不接触明文。邮箱授权码使用服务端 AES-256-GCM 加密存储（密钥从 AUTH_SECRET 派生）。
+2. **密码安全**：订阅密码在客户端通过 AES 加密后才发送到服务器，服务端永远不接触明文。
 3. **数据隔离**：所有 API 路由均通过 `getUserId()` 获取当前用户 ID，所有数据库查询都按 userId 过滤，确保用户间数据完全隔离。
-4. **定时任务**：通知检查和邮件扫描随 Next.js 服务启动自动运行，无需额外配置 cron job。
+4. **定时任务**：通知检查随 Next.js 服务启动自动运行，无需额外配置 cron job。
 5. **时区处理**：所有日期比较均规范化为当天零点后进行，避免 UTC 与本地时间差异导致的天数计算不一致。
 6. **PWA**：生产环境部署后可通过浏览器「安装到桌面」功能作为独立应用使用。

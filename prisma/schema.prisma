@@ -22,8 +22,6 @@ model User {
   notificationConfig NotificationConfig?
   budgetConfig       BudgetConfig?
   notificationLogs   NotificationLog[]
-  emailConnections   EmailConnection[]
-  discoveredSubs     DiscoveredSubscription[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -139,55 +137,4 @@ model BudgetConfig {
   updatedAt     DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-// ─── Email Bill Parsing ───
-
-model EmailConnection {
-  id                String   @id @default(cuid())
-  userId            String
-  provider          String   // qq / 163 / gmail / outlook / custom
-  imapHost          String
-  imapPort          Int      @default(993)
-  email             String
-  encryptedPassword String   // server-side AES-256-GCM
-  lastScanAt        DateTime?
-  scanEnabled       Boolean  @default(true)
-  scanFolder        String   @default("INBOX")
-
-  user         User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
-  discovered   DiscoveredSubscription[]
-
-  @@unique([userId, email])
-  @@index([userId])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model DiscoveredSubscription {
-  id                String   @id @default(cuid())
-  userId            String
-  emailConnectionId String
-  emailSubject      String
-  emailFrom         String?
-  emailDate         DateTime
-  emailBodySnippet  String?   @db.Text
-
-  serviceName       String
-  amount            Float?
-  currency          String?
-  billingCycle      String?
-  parsedDate        DateTime?
-  confidence        Float    @default(0)
-
-  status            String   @default("pending") // pending / imported / dismissed
-  importedSubId     String?
-
-  emailConnection EmailConnection @relation(fields: [emailConnectionId], references: [id], onDelete: Cascade)
-  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId, status])
-  @@index([emailConnectionId])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }

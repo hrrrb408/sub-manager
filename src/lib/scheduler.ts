@@ -1,10 +1,8 @@
 import * as cron from "node-cron";
 import { checkAndNotify } from "./notify";
-import { scanEmailsForUser } from "./email-scanner";
 import { prisma } from "./prisma";
 
 let notifyTask: cron.ScheduledTask | null = null;
-let emailScanTask: cron.ScheduledTask | null = null;
 
 export function startScheduler() {
   stopScheduler();
@@ -37,40 +35,12 @@ export function startScheduler() {
     }
   });
 
-  // Email scan: daily at 3 AM
-  emailScanTask = cron.schedule("0 3 * * *", async () => {
-    try {
-      const connections = await prisma.emailConnection.findMany({
-        where: { scanEnabled: true },
-        select: { userId: true },
-        distinct: ["userId"],
-      });
-
-      for (const { userId } of connections) {
-        try {
-          const result = await scanEmailsForUser(userId);
-          if (result.found > 0) {
-            console.log(`[EmailScan] 用户 ${userId}: 发现 ${result.found} 条订阅`);
-          }
-        } catch (error) {
-          console.error(`[EmailScan] 用户 ${userId} 扫描失败:`, error);
-        }
-      }
-    } catch (error) {
-      console.error("[EmailScan] 定时扫描失败:", error);
-    }
-  });
-
-  console.log("[Scheduler] 定时任务已启动 (通知 + 邮件扫描)");
+  console.log("[Scheduler] 定时任务已启动 (通知检查)");
 }
 
 export function stopScheduler() {
   if (notifyTask) {
     notifyTask.stop();
     notifyTask = null;
-  }
-  if (emailScanTask) {
-    emailScanTask.stop();
-    emailScanTask = null;
   }
 }

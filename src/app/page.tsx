@@ -48,8 +48,6 @@ import { BudgetAlert } from "@/components/subscriptions/budget-alert";
 import { CommandPalette } from "@/components/subscriptions/command-palette";
 import { AnnualReport } from "@/components/subscriptions/annual-report";
 import { BackupRestore } from "@/components/subscriptions/backup-restore";
-import { EmailScanSettings } from "@/components/subscriptions/email-scan-settings";
-import { DiscoveredSubs } from "@/components/subscriptions/discovered-subs";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { useAuth } from "@/lib/auth-context";
 import {
@@ -679,10 +677,7 @@ export default function HomePage() {
           {/* Settings Tab */}
           <TabsContent value="settings" className="space-y-6 max-w-2xl">
             <ErrorBoundary>
-            <DiscoveredSubs onImport={() => fetchSubscriptions()} />
             <NotificationSettings />
-            <Separator />
-            <EmailScanSettings onScanComplete={() => fetchSubscriptions()} />
             <Separator />
             <BackupRestore />
             </ErrorBoundary>
