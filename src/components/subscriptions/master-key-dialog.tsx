@@ -132,7 +132,10 @@ export function MasterKeySetup({ open, onOpenChange }: MasterKeySetupProps) {
 
 export function MasterKeyBadge() {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setMounted(true));
+    return () => cancelAnimationFrame(id);
+  }, []);
   if (!mounted) return <Key className="h-4 w-4 text-muted-foreground" />;
   const configured = hasMasterKey();
   return configured ? (

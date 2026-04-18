@@ -32,13 +32,12 @@ export function StatsOverview({ stats, currency }: StatsOverviewProps) {
   const hasMultiCurrency = Object.keys(breakdown).length > 1;
 
   useEffect(() => {
-    if (!hasMultiCurrency || !stats?.currencyBreakdown) {
-      setConvertedMonthly(null);
-      return;
-    }
+    if (!hasMultiCurrency || !stats?.currencyBreakdown) return;
+    let cancelled = false;
     fetch(`/api/exchange-rate?base=USD`)
       .then((r) => r.json())
       .then((data) => {
+        if (cancelled) return;
         const rates: Record<string, number> = data.rates || {};
         const targetSymbol = currency;
         let total = 0;
@@ -49,7 +48,8 @@ export function StatsOverview({ stats, currency }: StatsOverviewProps) {
         }
         setConvertedMonthly(Math.round(total * 100) / 100);
       })
-      .catch(() => setConvertedMonthly(null));
+      .catch(() => { if (!cancelled) setConvertedMonthly(null); });
+    return () => { cancelled = true; };
   }, [hasMultiCurrency, stats?.currencyBreakdown, currency]);
 
   if (!stats) return null;

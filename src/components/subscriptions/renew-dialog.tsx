@@ -45,7 +45,7 @@ export function RenewDialog({
 
   const daysLeft = subscription.endDate
     ? Math.ceil(
-        (new Date(subscription.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+        (new Date(subscription.endDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
       )
     : null;
 
