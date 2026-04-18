@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { toast } from "sonner";
 import { encrypt, getMasterKey } from "@/lib/crypto";
 import {
@@ -24,6 +24,8 @@ import {
   PLATFORMS,
   CURRENCIES,
   CATEGORIES,
+  BILLING_CYCLE_MAP,
+  formatAmount,
   type SubscriptionFormData,
   type Subscription,
 } from "@/lib/types";
@@ -32,6 +34,7 @@ interface SubscriptionFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   subscription?: Subscription | null;
+  existingSubscriptions?: Subscription[];
   onSuccess: () => void;
 }
 
@@ -58,10 +61,25 @@ export function SubscriptionForm({
   open,
   onOpenChange,
   subscription,
+  existingSubscriptions = [],
   onSuccess,
 }: SubscriptionFormProps) {
   const [form, setForm] = useState<SubscriptionFormData>(defaultForm);
   const [loading, setLoading] = useState(false);
+
+  const isEdit = !!subscription;
+
+  // Real-time duplicate detection
+  const duplicateWarning = useMemo(() => {
+    if (isEdit || !form.name.trim() || !form.platform) return null;
+    const found = existingSubscriptions.find(
+      (s) =>
+        s.name.toLowerCase() === form.name.trim().toLowerCase() &&
+        s.platform === form.platform &&
+        (s.status === "active" || s.status === "trialing")
+    );
+    return found || null;
+  }, [form.name, form.platform, isEdit, existingSubscriptions]);
 
   // Sync form when subscription prop changes or dialog opens
   useEffect(() => {
@@ -90,8 +108,6 @@ export function SubscriptionForm({
       }
     }
   }, [open, subscription]);
-
-  const isEdit = !!subscription;
 
   const validate = (): string | null => {
     if (!form.name.trim()) return "请输入服务名称";
@@ -149,6 +165,18 @@ export function SubscriptionForm({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5 mt-2">
+          {/* Duplicate warning */}
+          {duplicateWarning && (
+            <div className="flex items-center gap-2 rounded-lg border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 p-3 text-sm text-amber-700 dark:text-amber-400">
+              <span className="text-base">⚠</span>
+              <span>
+                已存在同名订阅「{duplicateWarning.name}」({duplicateWarning.platform})
+                {duplicateWarning.plan && ` · ${duplicateWarning.plan}`}
+                {" · "}{formatAmount(duplicateWarning.amount, duplicateWarning.currency)}/{BILLING_CYCLE_MAP[duplicateWarning.billingCycle]}
+              </span>
+            </div>
+          )}
+
           {/* Row 1: Name + Platform + Plan */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div className="space-y-2">

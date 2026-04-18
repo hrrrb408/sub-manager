@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, LayoutGrid, List, X, SlidersHorizontal } from "lucide-react";
+import { Search, LayoutGrid, List, Calendar, X, SlidersHorizontal } from "lucide-react";
 import { PLATFORMS, CATEGORIES } from "@/lib/types";
 
 interface SubscriptionFiltersProps {
@@ -21,8 +21,8 @@ interface SubscriptionFiltersProps {
   onCategoryChange: (value: string) => void;
   platform: string;
   onPlatformChange: (value: string) => void;
-  viewMode: "grid" | "table";
-  onViewModeChange: (mode: "grid" | "table") => void;
+  viewMode: "grid" | "table" | "calendar";
+  onViewModeChange: (mode: "grid" | "table" | "calendar") => void;
   hasFilters: boolean;
   onClearFilters: () => void;
 }
@@ -85,6 +85,14 @@ export function SubscriptionFilters({
               onClick={() => onViewModeChange("table")}
             >
               <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === "calendar" ? "secondary" : "ghost"}
+              size="icon"
+              className="h-8 w-8 rounded-none"
+              onClick={() => onViewModeChange("calendar")}
+            >
+              <Calendar className="h-4 w-4" />
             </Button>
           </div>
         </div>

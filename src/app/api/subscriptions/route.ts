@@ -63,6 +63,22 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    // Duplicate detection: same name + platform
+    const existing = await prisma.subscription.findFirst({
+      where: {
+        name: body.name,
+        platform: body.platform,
+        status: { in: ["active", "trialing"] },
+      },
+    });
+    if (existing) {
+      return NextResponse.json(
+        { error: `已存在同名同平台的活跃订阅「${body.name}」(${body.platform})`, duplicate: true },
+        { status: 409 }
+      );
+    }
+
     const subscription = await prisma.subscription.create({
       data: {
         name: body.name,

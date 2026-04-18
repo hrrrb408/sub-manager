@@ -97,6 +97,11 @@ export async function GET() {
       upcomingRenewals,
       byStatus,
       monthlyTrend,
+      currencyBreakdown: activeSubscriptions.reduce<Record<string, number>>((acc, s) => {
+        const monthly = s.billingCycle === "monthly" ? s.amount : s.billingCycle === "yearly" ? s.amount / 12 : s.amount * 4.33;
+        acc[s.currency] = (acc[s.currency] || 0) + monthly;
+        return acc;
+      }, {}),
     });
   } catch (error) {
     console.error("Failed to fetch stats:", error);

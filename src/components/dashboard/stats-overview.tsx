@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   DollarSign,
@@ -7,8 +8,9 @@ import {
   Package,
   AlertTriangle,
   CalendarClock,
+  RefreshCw,
 } from "lucide-react";
-import { formatAmount } from "@/lib/types";
+import { formatAmount, getCurrencySymbol } from "@/lib/types";
 
 interface StatsData {
   totalSubscriptions: number;
@@ -16,6 +18,7 @@ interface StatsData {
   monthlyTotal: number;
   yearlyTotal: number;
   upcomingRenewals: { id: string; name: string; amount: number; currency: string; endDate: string }[];
+  currencyBreakdown?: Record<string, number>;
 }
 
 interface StatsOverviewProps {
@@ -24,20 +27,54 @@ interface StatsOverviewProps {
 }
 
 export function StatsOverview({ stats, currency }: StatsOverviewProps) {
+  const [convertedMonthly, setConvertedMonthly] = useState<number | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  // Convert multi-currency totals
+  const breakdown = stats?.currencyBreakdown || {};
+  const hasMultiCurrency = Object.keys(breakdown).length > 1;
+
+  useEffect(() => {
+    if (!hasMultiCurrency || !stats?.currencyBreakdown) {
+      setConvertedMonthly(null);
+      return;
+    }
+    setLoading(true);
+    fetch(`/api/exchange-rate?base=USD`)
+      .then((r) => r.json())
+      .then((data) => {
+        const rates: Record<string, number> = data.rates || {};
+        const targetSymbol = currency;
+        let total = 0;
+        for (const [cur, amount] of Object.entries(stats.currencyBreakdown!)) {
+          const rate = rates[cur] || 1;
+          const targetRate = rates[targetSymbol] || 1;
+          total += (amount / rate) * targetRate;
+        }
+        setConvertedMonthly(Math.round(total * 100) / 100);
+      })
+      .catch(() => setConvertedMonthly(null))
+      .finally(() => setLoading(false));
+  }, [hasMultiCurrency, stats?.currencyBreakdown, currency]);
+
   if (!stats) return null;
+
+  const displayMonthly = hasMultiCurrency && convertedMonthly !== null
+    ? convertedMonthly
+    : stats.monthlyTotal;
 
   const cards = [
     {
       title: "月度支出",
-      value: formatAmount(stats.monthlyTotal, currency),
+      value: formatAmount(displayMonthly, currency),
       icon: DollarSign,
-      description: `${stats.activeCount} 个活跃订阅`,
+      description: hasMultiCurrency ? `${Object.keys(breakdown).length} 种币种已换算` : `${stats.activeCount} 个活跃订阅`,
       color: "text-emerald-600 dark:text-emerald-400",
       bg: "bg-emerald-500/10",
     },
     {
       title: "年度预算",
-      value: formatAmount(stats.yearlyTotal, currency),
+      value: formatAmount(displayMonthly * 12, currency),
       icon: TrendingUp,
       description: "预计全年支出",
       color: "text-blue-600 dark:text-blue-400",

@@ -18,6 +18,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "SubManager - 订阅管理平台",
   description: "管理你的所有 SaaS 订阅，追踪费用，掌控预算",
+  manifest: "/manifest.json",
+  themeColor: "#10b981",
 };
 
 export default function RootLayout({

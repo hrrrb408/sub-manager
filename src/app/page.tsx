@@ -1,5 +1,7 @@
 "use client";
 
+import "@/lib/register-sw";
+
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,7 +16,17 @@ import {
   Download,
   Inbox,
   Settings,
+  Upload,
+  Calendar,
+  Keyboard,
+  MoreVertical,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MasterKeySetup, MasterKeyBadge } from "@/components/subscriptions/master-key-dialog";
 import { toast } from "sonner";
 import { useTheme } from "@/components/theme-provider";
@@ -26,6 +38,14 @@ import { SubscriptionFilters } from "@/components/subscriptions/subscription-fil
 import { DeleteDialog } from "@/components/subscriptions/delete-dialog";
 import { NotificationSettings } from "@/components/subscriptions/notification-settings";
 import { ExpenseCharts } from "@/components/charts/expense-charts";
+import { StatsSkeleton, CardGridSkeleton, TableSkeleton } from "@/components/ui/skeleton";
+import { CalendarView } from "@/components/subscriptions/calendar-view";
+import { ImportDialog } from "@/components/subscriptions/import-dialog";
+import { BudgetAlert } from "@/components/subscriptions/budget-alert";
+import { CommandPalette } from "@/components/subscriptions/command-palette";
+import { AnnualReport } from "@/components/subscriptions/annual-report";
+import { BackupRestore } from "@/components/subscriptions/backup-restore";
+import { ErrorBoundary } from "@/components/error-boundary";
 import {
   formatAmount,
   BILLING_CYCLE_MAP,
@@ -50,13 +70,22 @@ export default function HomePage() {
   const [deleteTarget, setDeleteTarget] = useState<Subscription | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Import dialog
+  const [importOpen, setImportOpen] = useState(false);
+
+  // Command palette
+  const [commandOpen, setCommandOpen] = useState(false);
+
+  // Undo stack for soft delete
+  const undoStack = useRef<Subscription[]>([]);
+
   // Filters
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [platformFilter, setPlatformFilter] = useState("all");
-  const [viewMode, setViewMode] = useState<"grid" | "table">("grid");
+  const [viewMode, setViewMode] = useState<"grid" | "table" | "calendar">("grid");
 
   // Search debounce
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -106,6 +135,28 @@ export default function HomePage() {
     fetchStats();
   }, [fetchStats]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setCommandOpen((v) => !v);
+      } else if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        setEditingSub(null);
+        setFormOpen(true);
+      } else if (e.key === "/") {
+        e.preventDefault();
+        document.getElementById("search-input")?.focus();
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   useEffect(() => {
     fetchSubscriptions();
   }, [fetchSubscriptions]);
@@ -117,35 +168,69 @@ export default function HomePage() {
 
   const handleDeleteConfirm = async () => {
     if (!deleteTarget) return;
-    setDeleting(true);
+    const target = deleteTarget;
+    setDeleteTarget(null);
+
+    // Optimistic: remove from UI immediately
+    setSubscriptions((prev) => prev.filter((s) => s.id !== target.id));
+    undoStack.current.push(target);
+
     try {
-      const res = await fetch(`/api/subscriptions/${deleteTarget.id}`, {
+      const res = await fetch(`/api/subscriptions/${target.id}`, {
         method: "DELETE",
       });
       if (res.ok) {
-        toast.success(`已删除「${deleteTarget.name}」`);
-        fetchSubscriptions();
         fetchStats();
+        toast.success(`已删除「${target.name}」`, {
+          action: {
+            label: "撤销",
+            onClick: async () => {
+              const { encryptedPassword, ...rest } = target;
+              const res = await fetch("/api/subscriptions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  ...rest,
+                  encryptedPassword: encryptedPassword || undefined,
+                }),
+              });
+              if (res.ok) {
+                toast.success("已撤销删除");
+                fetchSubscriptions();
+                fetchStats();
+              }
+            },
+          },
+          duration: 5000,
+        });
       } else {
+        // Revert on failure
+        setSubscriptions((prev) => [...prev, target]);
         toast.error("删除失败，请重试");
       }
     } catch {
+      setSubscriptions((prev) => [...prev, target]);
       toast.error("删除失败，请检查网络");
-    } finally {
-      setDeleting(false);
-      setDeleteTarget(null);
     }
   };
 
   const handleFormSuccess = () => {
+    setEditingSub(null);
     fetchSubscriptions();
     fetchStats();
-    setEditingSub(null);
-    if (editingSub) {
-      toast.success(`已更新「${editingSub.name}」`);
+  };
+
+  const handleFormSubmitted = (newSub: Subscription, isEdit: boolean) => {
+    if (isEdit) {
+      setSubscriptions((prev) =>
+        prev.map((s) => (s.id === newSub.id ? newSub : s))
+      );
+      toast.success(`已更新「${newSub.name}」`);
     } else {
+      setSubscriptions((prev) => [newSub, ...prev]);
       toast.success("订阅已添加");
     }
+    fetchStats();
   };
 
   const handleRenew = (_id: string) => {
@@ -279,10 +364,11 @@ export default function HomePage() {
               )}
             </div>
             <div className="flex items-center gap-1.5 sm:gap-2">
+              {/* Desktop: show all buttons */}
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8"
+                className="h-8 w-8 hidden sm:inline-flex"
                 onClick={() => setMasterKeyOpen(true)}
                 title="主密钥设置"
               >
@@ -292,7 +378,7 @@ export default function HomePage() {
                 variant="ghost"
                 size="icon"
                 onClick={toggleTheme}
-                className="h-8 w-8"
+                className="h-8 w-8 hidden sm:inline-flex"
               >
                 {theme === "light" ? (
                   <Moon className="h-4 w-4" />
@@ -301,16 +387,61 @@ export default function HomePage() {
                 )}
               </Button>
               {subscriptions.length > 0 && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={exportCSV}
-                  title="导出 CSV"
-                >
-                  <Download className="h-4 w-4" />
-                </Button>
+                <>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hidden sm:inline-flex"
+                    onClick={() => setImportOpen(true)}
+                    title="导入数据"
+                  >
+                    <Upload className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 hidden sm:inline-flex"
+                    onClick={exportCSV}
+                    title="导出 CSV"
+                  >
+                    <Download className="h-4 w-4" />
+                  </Button>
+                </>
               )}
+
+              {/* Mobile: overflow menu */}
+              <DropdownMenu>
+                <DropdownMenuTrigger className="sm:hidden h-8 w-8 inline-flex items-center justify-center rounded-md hover:bg-accent">
+                  <MoreVertical className="h-4 w-4" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={toggleTheme}>
+                    {theme === "light" ? <Moon className="h-4 w-4 mr-2" /> : <Sun className="h-4 w-4 mr-2" />}
+                    {theme === "light" ? "深色模式" : "浅色模式"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setMasterKeyOpen(true)}>
+                    <MasterKeyBadge />
+                    <span className="ml-2">主密钥设置</span>
+                  </DropdownMenuItem>
+                  {subscriptions.length > 0 && (
+                    <>
+                      <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                        <Upload className="h-4 w-4 mr-2" />
+                        导入数据
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={exportCSV}>
+                        <Download className="h-4 w-4 mr-2" />
+                        导出 CSV
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                  <DropdownMenuItem onClick={() => setCommandOpen(true)}>
+                    <Keyboard className="h-4 w-4 mr-2" />
+                    命令面板
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               <Button
                 size="sm"
                 className="gap-1.5"
@@ -348,6 +479,7 @@ export default function HomePage() {
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-5 sm:space-y-6">
+          <ErrorBoundary>
             {/* Stats Overview */}
             <StatsOverview
               stats={
@@ -368,7 +500,13 @@ export default function HomePage() {
               currency="USD"
             />
 
-            {/* Renewals Alert */}
+            {/* Budget Alert */}
+            {!loading && stats && (
+              <BudgetAlert
+                monthlyTotal={(stats as Record<string, number>).monthlyTotal || 0}
+                yearlyTotal={(stats as Record<string, number>).yearlyTotal || 0}
+              />
+            )}
             {upcomingRenewals.length > 0 && (
               <div className="rounded-xl border border-amber-200 dark:border-amber-800/50 bg-amber-50 dark:bg-amber-950/30 p-4">
                 <div className="flex items-center gap-2 mb-2">
@@ -412,9 +550,11 @@ export default function HomePage() {
 
             {/* Subscription list */}
             {loading ? (
-              <div className="flex items-center justify-center h-48">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-              </div>
+              <>
+                <StatsSkeleton />
+                <Separator />
+                <CardGridSkeleton />
+              </>
             ) : subscriptions.length === 0 && hasFilters ? (
               /* Empty state for filtered results */
               <div className="flex flex-col items-center justify-center py-16 text-center">
@@ -450,6 +590,12 @@ export default function HomePage() {
                   添加第一个订阅
                 </Button>
               </div>
+            ) : viewMode === "calendar" ? (
+              <CalendarView
+                subscriptions={subscriptions}
+                onEdit={handleEdit}
+                onRenew={handleRenew}
+              />
             ) : viewMode === "grid" ? (
               <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 {subscriptions.map((sub) => (
@@ -474,12 +620,19 @@ export default function HomePage() {
                   if (sub) setDeleteTarget(sub);
                 }}
                 onRenew={handleRenew}
+                onBatchDelete={async (ids) => {
+                  setSubscriptions((prev) => prev.filter((s) => !ids.includes(s.id)));
+                  await Promise.all(ids.map((id) => fetch(`/api/subscriptions/${id}`, { method: "DELETE" })));
+                  fetchStats();
+                }}
               />
             )}
+          </ErrorBoundary>
           </TabsContent>
 
           {/* Analytics Tab */}
           <TabsContent value="analytics" className="space-y-6">
+            <ErrorBoundary>
             <ExpenseCharts
               stats={
                 stats as {
@@ -491,11 +644,20 @@ export default function HomePage() {
               }
               currency="USD"
             />
+
+            <Separator />
+
+            <AnnualReport />
+            </ErrorBoundary>
           </TabsContent>
 
           {/* Settings Tab */}
-          <TabsContent value="settings">
+          <TabsContent value="settings" className="space-y-6 max-w-2xl">
+            <ErrorBoundary>
             <NotificationSettings />
+            <Separator />
+            <BackupRestore />
+            </ErrorBoundary>
           </TabsContent>
         </Tabs>
       </main>
@@ -508,6 +670,7 @@ export default function HomePage() {
           if (!open) setEditingSub(null);
         }}
         subscription={editingSub}
+        existingSubscriptions={subscriptions}
         onSuccess={handleFormSuccess}
       />
 
@@ -522,6 +685,27 @@ export default function HomePage() {
       />
 
       <MasterKeySetup open={masterKeyOpen} onOpenChange={setMasterKeyOpen} />
+
+      <ImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        onSuccess={() => {
+          fetchSubscriptions();
+          fetchStats();
+        }}
+      />
+
+      <CommandPalette
+        open={commandOpen}
+        onOpenChange={setCommandOpen}
+        subscriptions={subscriptions}
+        onEdit={handleEdit}
+        onRenew={handleRenew}
+        onAddNew={() => { setEditingSub(null); setFormOpen(true); }}
+        onImport={() => setImportOpen(true)}
+        onExport={exportCSV}
+        onNavigate={setActiveTab}
+      />
     </div>
   );
 }

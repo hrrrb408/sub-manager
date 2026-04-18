@@ -69,3 +69,12 @@ model NotificationLog {
   @@index([createdAt])
   @@index([type])
 }
+
+model BudgetConfig {
+  id            String   @id @default("default")
+  monthlyBudget Float    @default(0)
+  yearlyBudget  Float    @default(0)
+  currency      String   @default("USD")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}

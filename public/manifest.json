@@ -1,0 +1,16 @@
+{
+  "name": "SubManager - 订阅管理",
+  "short_name": "SubManager",
+  "description": "SaaS 订阅管理平台，追踪和管理你的在线订阅支出",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#10b981",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
